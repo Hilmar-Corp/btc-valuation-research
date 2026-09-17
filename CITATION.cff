@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this research software, please cite it using these metadata."
+title: "Bitcoin Valuation Research"
+type: software
+authors:
+  - family-names: "Hilmarcher"
+    given-names: "Clovis"
+    affiliation: "HilmarCorp"
+year: 2026
+license: Apache-2.0
+repository-code: "https://github.com/Hilmar-Corp/btc-valuation-research"
