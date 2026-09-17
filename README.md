@@ -1,5 +1,11 @@
 # Bitcoin Valuation Research
 
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Public research quality](https://github.com/Hilmar-Corp/btc-valuation-research/actions/workflows/quality.yml/badge.svg)](https://github.com/Hilmar-Corp/btc-valuation-research/actions/workflows/quality.yml)
+[![CodeQL](https://github.com/Hilmar-Corp/btc-valuation-research/actions/workflows/codeql.yml/badge.svg)](https://github.com/Hilmar-Corp/btc-valuation-research/actions/workflows/codeql.yml)
+[![Dependency and SBOM controls](https://github.com/Hilmar-Corp/btc-valuation-research/actions/workflows/security.yml/badge.svg)](https://github.com/Hilmar-Corp/btc-valuation-research/actions/workflows/security.yml)
+[![Release](https://img.shields.io/github/v/release/Hilmar-Corp/btc-valuation-research?display_name=tag&sort=semver)](https://github.com/Hilmar-Corp/btc-valuation-research/releases/latest)
+
 A public quantitative research framework for studying economic valuation anchors for Bitcoin.
 
 This repository contains the methodological and software layer of HilmarCorp research on Bitcoin valuation.
