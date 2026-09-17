@@ -1,0 +1,268 @@
+contract:
+  version: 1.1.1
+  frozen_before_model_results: true
+  base_currency: USD
+  primary_frequency: monthly
+  requested_start: '2017-08-17'
+series:
+- id: btc_price_usd
+  role: primary_market_price
+  provider: Coinbase Exchange
+  source_type: REST_API
+  endpoint: https://api.exchange.coinbase.com/products/BTC-USD/candles
+  native_frequency: daily
+  native_field: close
+  unit: USD_per_BTC
+  authentication: none
+  timestamp_convention: UTC_daily_bucket
+  monthly_transformation: last_available_daily_close
+  missing_policy: no_interpolation
+  point_in_time: true
+  revision_risk: low
+  qc:
+    require_positive: true
+    require_unique_timestamp: true
+    require_monotonic_timestamp: true
+    max_missing_calendar_days: 0
+  notes:
+  - Coinbase endpoint returns at most 300 candles per request.
+  - Downloader must paginate using non-overlapping time windows.
+  - Raw responses must be persisted before transformation.
+  required: true
+  enabled: true
+- id: btc_supply_current
+  role: scarcity_stock
+  provider: Coin Metrics
+  source_type: REST_API
+  endpoint: https://community-api.coinmetrics.io/v4/timeseries/asset-metrics
+  asset: btc
+  metric: SplyCur
+  native_frequency: daily
+  unit: BTC
+  authentication: none_expected_community_api
+  timestamp_convention: provider_daily_interval
+  monthly_transformation: last_available_observation
+  missing_policy: no_interpolation
+  point_in_time: ledger_based
+  revision_risk: low_to_moderate
+  qc:
+    require_positive: true
+    require_unique_timestamp: true
+    require_monotonic_timestamp: true
+    expected_non_decreasing: true
+  required: true
+  enabled: true
+- id: btc_active_addresses
+  role: primary_network_proxy
+  provider: Coin Metrics
+  source_type: REST_API
+  endpoint: https://community-api.coinmetrics.io/v4/timeseries/asset-metrics
+  asset: btc
+  metric: AdrActCnt
+  native_frequency: daily
+  unit: addresses
+  authentication: none_expected_community_api
+  timestamp_convention: provider_daily_interval
+  monthly_transformation: monthly_mean_daily_active_addresses
+  missing_policy: no_interpolation
+  point_in_time: ledger_based
+  revision_risk: moderate
+  qc:
+    require_nonnegative: true
+    require_unique_timestamp: true
+    require_monotonic_timestamp: true
+  interpretation:
+  - Network activity proxy, not literal unique-user count.
+  - One user can control multiple addresses.
+  - One custodian address can represent multiple users.
+  required: true
+  enabled: true
+- id: btc_adjusted_transfer_value
+  role: network_robustness_proxy
+  provider: Coin Metrics
+  source_type: REST_API
+  endpoint: https://community-api.coinmetrics.io/v4/timeseries/asset-metrics
+  asset: btc
+  metric: TxTfrValAdjUSD
+  native_frequency: daily
+  unit: USD
+  authentication: none_expected_community_api
+  timestamp_convention: provider_daily_interval
+  monthly_transformation: monthly_sum
+  missing_policy: no_interpolation
+  point_in_time: ledger_based
+  revision_risk: moderate
+  qc:
+    require_nonnegative: true
+    require_unique_timestamp: true
+    require_monotonic_timestamp: true
+  required: false
+  enabled: false
+  availability_status: unavailable_on_coinmetrics_community_catalog
+  availability_checked_on: '2026-09-16'
+  decision: disabled_without_substitution
+- id: btc_hashrate
+  role: production_diagnostic
+  provider: Coin Metrics
+  source_type: REST_API
+  endpoint: https://community-api.coinmetrics.io/v4/timeseries/asset-metrics
+  asset: btc
+  metric: HashRate
+  native_frequency: daily
+  unit: TH_per_second
+  authentication: none_expected_community_api
+  timestamp_convention: provider_daily_interval
+  monthly_transformation: monthly_mean
+  missing_policy: no_interpolation
+  point_in_time: estimated_from_chain_data
+  revision_risk: moderate
+  qc:
+    require_positive: true
+    require_unique_timestamp: true
+    require_monotonic_timestamp: true
+  required: true
+  enabled: true
+- id: btc_production_cost_electricity
+  role: primary_production_cost_anchor
+  provider: HilmarCorp reconstruction
+  dataset: Bitcoin Mining Production Cost
+  source_type: derived_external_anchor
+  methodology_url: https://ccaf.io/cbnsi/cbeci/mining_map/mining_data
+  native_frequency: daily
+  unit: USD_per_BTC
+  electricity_rate_assumption_usd_kwh: 0.05
+  monthly_transformation: monthly_mean
+  missing_policy: no_interpolation
+  point_in_time: model_estimate
+  revision_risk: material
+  qc:
+    require_positive: true
+    require_unique_timestamp: true
+    require_monotonic_timestamp: true
+  interpretation:
+  - Electricity-cost anchor only.
+  - Not a full miner break-even cost.
+  - Excludes ASIC depreciation, facilities, labour and other operating costs.
+  - Cambridge electricity series is used as published.
+  - Miner rewards are reconstructed from Coin Metrics issuance plus fees.
+  required: true
+  enabled: true
+  construction:
+    electricity_input: cbeci_annualised_consumption_guess
+    issuance_input: btc_issuance_native
+    fees_input: btc_fees_native
+    electricity_price_usd_per_kwh: 0.05
+    reward_smoothing_days: 7
+    formula: ((cbeci_twh_per_year * 1e9 * 0.05) / 365.25) / rolling_mean_7d(btc_issuance_native + btc_fees_native)
+    annualisation_days: 365.25
+    reward_warmup_days: 6
+    electricity_input_smoothing: CBECI published series already incorporates 7-day smoothing
+    reward_smoothing: 7-day trailing arithmetic mean of IssTotNtv + FeeTotNtv
+- id: gold_market_value_snapshot
+  role: gold_scenario_anchor
+  provider: World Gold Council
+  source_type: official_snapshot
+  source_url: https://www.gold.org/goldhub/data/how-much-gold
+  observation_date: '2026-06-30'
+  publication_date: '2026-08-18'
+  above_ground_stock_tonnes: 222600
+  reported_market_value_usd_trillion: 29.0
+  unit: USD
+  transformation: none
+  point_in_time: false
+  revision_risk: moderate
+  use:
+  - scenario_analysis_only
+  - not_used_for_predictive_regressions
+  - not_used_for_cointegration
+  theta_grid:
+  - 0.05
+  - 0.1
+  - 0.25
+  - 0.5
+  - 1.0
+  required: true
+  enabled: true
+- id: cbeci_annualised_consumption_guess
+  role: production_cost_energy_input
+  provider: Cambridge Centre for Alternative Finance
+  source_type: official_public_dataset
+  endpoint: https://ccaf.io/cbeci/api/v1.8.0/download/data?price=0.05
+  native_frequency: daily
+  native_field: annualised consumption GUESS, TWh
+  unit: TWh_per_year
+  electricity_price_assumption_usd_kwh: 0.05
+  required: true
+  enabled: true
+  missing_policy: no_interpolation
+  revision_risk: material
+  qc:
+    require_positive: true
+    require_unique_timestamp: true
+    require_monotonic_timestamp: true
+- id: btc_issuance_native
+  role: production_cost_reward_input
+  provider: Coin Metrics
+  source_type: REST_API
+  endpoint: https://community-api.coinmetrics.io/v4/timeseries/asset-metrics
+  asset: btc
+  metric: IssTotNtv
+  native_frequency: daily
+  unit: BTC_per_day
+  required: true
+  enabled: true
+  missing_policy: no_interpolation
+  point_in_time: ledger_based
+  revision_risk: low_to_moderate
+  qc:
+    require_nonnegative: true
+    require_unique_timestamp: true
+    require_monotonic_timestamp: true
+- id: btc_fees_native
+  role: production_cost_reward_input
+  provider: Coin Metrics
+  source_type: REST_API
+  endpoint: https://community-api.coinmetrics.io/v4/timeseries/asset-metrics
+  asset: btc
+  metric: FeeTotNtv
+  native_frequency: daily
+  unit: BTC_per_day
+  required: true
+  enabled: true
+  missing_policy: no_interpolation
+  point_in_time: ledger_based
+  revision_risk: low_to_moderate
+  qc:
+    require_nonnegative: true
+    require_unique_timestamp: true
+    require_monotonic_timestamp: true
+derived_series:
+- id: btc_market_cap_consistent
+  formula: btc_price_usd * btc_supply_current
+  unit: USD
+  role: dependent_variable_network_model
+- id: btc_flow_trailing_365d
+  formula: btc_supply_current_t - btc_supply_current_t_minus_365d
+  unit: BTC_per_year
+  role: scarcity_flow
+- id: btc_stock_to_flow
+  formula: btc_supply_current / btc_flow_trailing_365d
+  unit: ratio
+  role: scarcity_anchor
+- id: log_btc_price
+  formula: log(btc_price_usd)
+- id: log_btc_market_cap
+  formula: log(btc_market_cap_consistent)
+- id: log_active_addresses
+  formula: log(btc_active_addresses)
+research_constraints:
+  interpolation_allowed: false
+  backward_fill_allowed: false
+  forward_fill_allowed: false
+  silent_row_drop_allowed: false
+  raw_data_mutation_allowed: false
+  preserve_download_timestamp: true
+  preserve_source_url: true
+  preserve_raw_response: true
+  hash_raw_files: true
+  model_results_may_change_contract: false
